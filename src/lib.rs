@@ -93,3 +93,6 @@
 pub mod anomaly;
 pub mod category;
 pub mod status;
+
+#[cfg(test)]
+mod tests;
