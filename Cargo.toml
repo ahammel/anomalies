@@ -2,11 +2,11 @@
 name = "anomalies"
 version = "0.1.0"
 edition = "2024"
-description = ""
+description = "Structured, categorized error handling inspired by Cognitect's anomalies"
 license = "MIT OR Apache-2.0"
-repository = ""
+repository = "https://github.com/ahammel/anomalies"
 readme = "README.md"
-keywords = []
-categories = []
+keywords = ["error", "error-handling", "anomaly"]
+categories = ["rust-patterns"]
 
 [dependencies]
