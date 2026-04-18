@@ -25,8 +25,8 @@
 //!   request might succeed later; [`status::Status::Permanent`] means it won't.
 //!
 //! - **[`anomaly`]** — a [`std::error::Error`] with a [`category::Category`] and a [`status::Status`].
-//! [`anomaly::Anomaly`] is the base trait; each category has a convenience sub-trait
-//! (e.g. [`anomaly::NotFound`]) with sensible defaults so implementors only override what they need to.
+//!   [`anomaly::Anomaly`] is the base trait; each category has a convenience sub-trait
+//!   (e.g. [`anomaly::NotFound`]) with sensible defaults so implementors only override what they need to.
 //!
 //! # Usage
 //!
