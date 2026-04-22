@@ -1,8 +1,8 @@
 use std::fmt;
 
 use crate::{
-    anomaly::{self, Anomaly},
-    category,
+    anomaly::{Anomaly, HasCategory, HasStatus},
+    category::{self},
     status::Status,
 };
 
@@ -16,7 +16,20 @@ impl fmt::Display for ServiceDown {
     }
 }
 impl std::error::Error for ServiceDown {}
-impl anomaly::Unavailable for ServiceDown {}
+
+impl HasStatus for ServiceDown {
+    fn status(&self) -> Status {
+        Status::Temporary
+    }
+}
+
+impl HasCategory for ServiceDown {
+    fn category(&self) -> category::Category {
+        category::Unavailable
+    }
+}
+
+impl Anomaly for ServiceDown {}
 
 #[derive(Debug)]
 struct TimedOut;
@@ -26,11 +39,20 @@ impl fmt::Display for TimedOut {
     }
 }
 impl std::error::Error for TimedOut {}
-impl anomaly::Interrupted for TimedOut {
+
+impl HasStatus for TimedOut {
     fn status(&self) -> Status {
         Status::Temporary
     }
 }
+
+impl HasCategory for TimedOut {
+    fn category(&self) -> category::Category {
+        category::Interrupted
+    }
+}
+
+impl Anomaly for TimedOut {}
 
 #[derive(Debug)]
 struct RateLimited;
@@ -40,7 +62,20 @@ impl fmt::Display for RateLimited {
     }
 }
 impl std::error::Error for RateLimited {}
-impl anomaly::Busy for RateLimited {}
+
+impl HasStatus for RateLimited {
+    fn status(&self) -> Status {
+        Status::Temporary
+    }
+}
+
+impl HasCategory for RateLimited {
+    fn category(&self) -> category::Category {
+        category::Busy
+    }
+}
+
+impl Anomaly for RateLimited {}
 
 #[derive(Debug)]
 struct BadInput;
@@ -50,7 +85,20 @@ impl fmt::Display for BadInput {
     }
 }
 impl std::error::Error for BadInput {}
-impl anomaly::Incorrect for BadInput {}
+
+impl HasStatus for BadInput {
+    fn status(&self) -> Status {
+        Status::Permanent
+    }
+}
+
+impl HasCategory for BadInput {
+    fn category(&self) -> category::Category {
+        category::Incorrect
+    }
+}
+
+impl Anomaly for BadInput {}
 
 #[derive(Debug)]
 struct PermissionDenied;
@@ -60,7 +108,20 @@ impl fmt::Display for PermissionDenied {
     }
 }
 impl std::error::Error for PermissionDenied {}
-impl anomaly::Forbidden for PermissionDenied {}
+
+impl HasStatus for PermissionDenied {
+    fn status(&self) -> Status {
+        Status::Permanent
+    }
+}
+
+impl HasCategory for PermissionDenied {
+    fn category(&self) -> category::Category {
+        category::Forbidden
+    }
+}
+
+impl Anomaly for PermissionDenied {}
 
 #[derive(Debug)]
 struct NotImplemented;
@@ -70,7 +131,20 @@ impl fmt::Display for NotImplemented {
     }
 }
 impl std::error::Error for NotImplemented {}
-impl anomaly::Unsupported for NotImplemented {}
+
+impl HasStatus for NotImplemented {
+    fn status(&self) -> Status {
+        Status::Permanent
+    }
+}
+
+impl HasCategory for NotImplemented {
+    fn category(&self) -> category::Category {
+        category::Unsupported
+    }
+}
+
+impl Anomaly for NotImplemented {}
 
 #[derive(Debug)]
 struct Missing;
@@ -80,11 +154,20 @@ impl fmt::Display for Missing {
     }
 }
 impl std::error::Error for Missing {}
-impl anomaly::NotFound for Missing {
+
+impl HasStatus for Missing {
     fn status(&self) -> Status {
         Status::Permanent
     }
 }
+
+impl HasCategory for Missing {
+    fn category(&self) -> category::Category {
+        category::NotFound
+    }
+}
+
+impl Anomaly for Missing {}
 
 #[derive(Debug)]
 struct AlreadyExists;
@@ -93,8 +176,22 @@ impl fmt::Display for AlreadyExists {
         f.write_str("already exists")
     }
 }
+
 impl std::error::Error for AlreadyExists {}
-impl anomaly::Conflict for AlreadyExists {}
+
+impl HasStatus for AlreadyExists {
+    fn status(&self) -> Status {
+        Status::Permanent
+    }
+}
+
+impl HasCategory for AlreadyExists {
+    fn category(&self) -> category::Category {
+        category::Conflict
+    }
+}
+
+impl Anomaly for AlreadyExists {}
 
 #[derive(Debug)]
 struct InternalError;
@@ -104,78 +201,91 @@ impl fmt::Display for InternalError {
     }
 }
 impl std::error::Error for InternalError {}
-impl anomaly::Fault for InternalError {}
+
+impl HasStatus for InternalError {
+    fn status(&self) -> Status {
+        Status::Permanent
+    }
+}
+
+impl HasCategory for InternalError {
+    fn category(&self) -> category::Category {
+        category::Fault
+    }
+}
+
+impl Anomaly for InternalError {}
 
 // Tests
 
 #[test]
 fn unavailable_is_temporary() {
     assert_eq!(
-        Anomaly::<category::Unavailable>::status(&ServiceDown),
-        Status::Temporary,
+        (ServiceDown.status(), ServiceDown.category()),
+        (Status::Temporary, category::Unavailable),
     );
 }
 
 #[test]
 fn interrupted_delegates_status() {
     assert_eq!(
-        Anomaly::<category::Interrupted>::status(&TimedOut),
-        Status::Temporary,
+        (TimedOut.status(), TimedOut.category()),
+        (Status::Temporary, category::Interrupted),
     );
 }
 
 #[test]
 fn busy_is_temporary() {
     assert_eq!(
-        Anomaly::<category::Busy>::status(&RateLimited),
-        Status::Temporary,
+        (RateLimited.status(), RateLimited.category()),
+        (Status::Temporary, category::Busy),
     );
 }
 
 #[test]
 fn incorrect_is_permanent() {
     assert_eq!(
-        Anomaly::<category::Incorrect>::status(&BadInput),
-        Status::Permanent,
+        (BadInput.status(), BadInput.category()),
+        (Status::Permanent, category::Incorrect),
     );
 }
 
 #[test]
 fn forbidden_is_permanent() {
     assert_eq!(
-        Anomaly::<category::Forbidden>::status(&PermissionDenied),
-        Status::Permanent,
+        (PermissionDenied.status(), PermissionDenied.category()),
+        (Status::Permanent, category::Forbidden),
     );
 }
 
 #[test]
 fn unsupported_is_permanent() {
     assert_eq!(
-        Anomaly::<category::Unsupported>::status(&NotImplemented),
-        Status::Permanent,
+        (NotImplemented.status(), NotImplemented.category()),
+        (Status::Permanent, category::Unsupported),
     );
 }
 
 #[test]
 fn not_found_delegates_status() {
     assert_eq!(
-        Anomaly::<category::NotFound>::status(&Missing),
-        Status::Permanent,
+        (Missing.status(), Missing.category()),
+        (Status::Permanent, category::NotFound),
     );
 }
 
 #[test]
 fn conflict_is_permanent() {
     assert_eq!(
-        Anomaly::<category::Conflict>::status(&AlreadyExists),
-        Status::Permanent,
+        (AlreadyExists.status(), AlreadyExists.category()),
+        (Status::Permanent, category::Conflict),
     );
 }
 
 #[test]
 fn fault_is_permanent() {
     assert_eq!(
-        Anomaly::<category::Fault>::status(&InternalError),
-        Status::Permanent,
+        (InternalError.status(), InternalError.category()),
+        (Status::Permanent, category::Fault),
     );
 }

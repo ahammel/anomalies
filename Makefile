@@ -18,3 +18,6 @@ r run:
 
 br build-release:
 	cargo build --release --all
+
+w watch:
+	fd .rs | entr -s 'clear && make c && make l && make t'

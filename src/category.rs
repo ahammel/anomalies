@@ -1,8 +1,9 @@
+#![allow(non_upper_case_globals)]
 //! Zero-sized marker types that classify anomalies by kind.
 //!
-//! Each type in this module answers the question *what kind of problem is this?*
-//! They are used as the type parameter `C` on [`crate::anomaly::Anomaly<C>`] and
-//! as supertrait bounds on the convenience traits in [`crate::anomaly`].
+//! Each constant in this module answers the question *what kind of problem is this?*
+//! Return one from [`crate::anomaly::HasCategory::category`] to classify your error type.
+use std::fmt;
 
 /// Marker trait for anomaly categories.
 ///
@@ -13,7 +14,34 @@
 /// You generally do not implement this trait directly; use one of the provided
 /// concrete categories instead. The trait exists as a bound on [`crate::anomaly::Anomaly`]
 /// so that generic code can accept any category.
-pub trait Category {}
+#[derive(Copy, Clone, Hash, PartialEq, Eq)]
+pub struct Category(&'static str);
+
+impl Category {
+    /// Creates a new category with the given name.
+    ///
+    /// Use this to define custom categories outside the crate:
+    ///
+    /// ```rust
+    /// use anomalies::category::Category;
+    /// pub static RateLimited: Category = Category::new("rate-limited");
+    /// ```
+    pub const fn new(name: &'static str) -> Self {
+        Category(name)
+    }
+}
+
+impl fmt::Debug for Category {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl fmt::Display for Category {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
 /// The requested resource or service is not currently reachable.
 ///
@@ -22,9 +50,7 @@ pub trait Category {}
 /// recovers.
 ///
 /// Default status: [`Status::Temporary`](crate::status::Status::Temporary).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Unavailable;
-impl Category for Unavailable {}
+pub const Unavailable: Category = Category("unavailable");
 
 /// The operation was cut short before it could complete.
 ///
@@ -32,9 +58,7 @@ impl Category for Unavailable {}
 /// a cancellation signal, a network reset) stopped it mid-flight. Whether the
 /// caller should retry depends on whether the partial work was committed; there is
 /// no universal default status for this category.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Interrupted;
-impl Category for Interrupted {}
+pub const Interrupted: Category = Category("interrupted");
 
 /// The system is reachable but overloaded and cannot accept more work right now.
 ///
@@ -42,9 +66,7 @@ impl Category for Interrupted {}
 /// demand than capacity at this moment. Callers should back off and retry.
 ///
 /// Default status: [`Status::Temporary`](crate::status::Status::Temporary).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Busy;
-impl Category for Busy {}
+pub const Busy: Category = Category("busy");
 
 /// The request itself is malformed or invalid.
 ///
@@ -52,9 +74,7 @@ impl Category for Busy {}
 /// Retrying the same request unchanged will not help.
 ///
 /// Default status: [`Status::Permanent`](crate::status::Status::Permanent).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Incorrect;
-impl Category for Incorrect {}
+pub const Incorrect: Category = Category("incorrect");
 
 /// The caller does not have permission to perform the operation.
 ///
@@ -63,9 +83,7 @@ impl Category for Incorrect {}
 /// identity.
 ///
 /// Default status: [`Status::Permanent`](crate::status::Status::Permanent).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Forbidden;
-impl Category for Forbidden {}
+pub const Forbidden: Category = Category("forbidden");
 
 /// The operation is not supported by this implementation.
 ///
@@ -73,18 +91,14 @@ impl Category for Forbidden {}
 /// a permanent condition: the feature simply does not exist.
 ///
 /// Default status: [`Status::Permanent`](crate::status::Status::Permanent).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Unsupported;
-impl Category for Unsupported {}
+pub const Unsupported: Category = Category("unsupported");
 
 /// The requested resource does not exist.
 ///
 /// The identifier or path is valid but points to nothing. Whether this is
 /// permanent depends on context (e.g. a deleted record vs. a race with a
 /// concurrent create), so there is no universal default status for this category.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct NotFound;
-impl Category for NotFound {}
+pub const NotFound: Category = Category("not-found");
 
 /// The operation cannot be applied because it conflicts with existing state.
 ///
@@ -93,9 +107,7 @@ impl Category for NotFound {}
 /// the conflict; the caller must reconcile the state difference first.
 ///
 /// Default status: [`Status::Permanent`](crate::status::Status::Permanent).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Conflict;
-impl Category for Conflict {}
+pub const Conflict: Category = Category("conflict");
 
 /// An internal error that is the system's fault, not the caller's.
 ///
@@ -104,6 +116,4 @@ impl Category for Conflict {}
 /// request.
 ///
 /// Default status: [`Status::Permanent`](crate::status::Status::Permanent).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Fault;
-impl Category for Fault {}
+pub const Fault: Category = Category("fault");

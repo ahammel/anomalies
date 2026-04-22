@@ -25,8 +25,8 @@
 //!   request might succeed later; [`status::Status::Permanent`] means it won't.
 //!
 //! - **[`anomaly`]** — a [`std::error::Error`] with a [`category::Category`] and a [`status::Status`].
-//!   [`anomaly::Anomaly`] is the base trait; each category has a convenience sub-trait
-//!   (e.g. [`anomaly::NotFound`]) with sensible defaults so implementors only override what they need to.
+//!   [`anomaly::Anomaly`] is the base trait; implement [`anomaly::HasCategory`] and
+//!   [`anomaly::HasStatus`] on your error type, then add an empty `impl Anomaly for YourType {}`.
 //!
 //! # Usage
 //!
@@ -34,7 +34,8 @@
 //!
 //! ```rust
 //! use std::fmt;
-//! use anomalies::anomaly;
+//! use anomalies::anomaly::{Anomaly, HasCategory, HasStatus};
+//! use anomalies::category::{Category, NotFound};
 //! use anomalies::status::Status;
 //!
 //! #[derive(Debug)]
@@ -48,35 +49,17 @@
 //!
 //! impl std::error::Error for RecordMissing {}
 //!
-//! impl anomaly::NotFound for RecordMissing {
+//! impl HasStatus for RecordMissing {
 //!     fn status(&self) -> Status { Status::Permanent }
 //! }
-//! ```
 //!
-//! For categories with unambiguous status (e.g. [`anomaly::Incorrect`]), the impl
-//! block can be completely empty:
-//!
-//! ```rust
-//! # use std::fmt;
-//! # #[derive(Debug)] struct BadInput;
-//! # impl fmt::Display for BadInput {
-//! #     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { write!(f, "bad input") }
-//! # }
-//! # impl std::error::Error for BadInput {}
-//! use anomalies::anomaly;
-//!
-//! impl anomaly::Incorrect for BadInput {}
-//! ```
-//!
-//! A generic caller can then branch on category or status without knowing the concrete type:
-//!
-//! ```rust
-//! # use anomalies::anomaly::Anomaly;
-//! # use anomalies::category::Category;
-//! # use anomalies::status::Status;
-//! fn should_retry(e: &dyn Anomaly<impl Category>) -> bool {
-//!     e.status() == Status::Temporary
+//! impl HasCategory for RecordMissing {
+//!     fn category(&self) -> Category {
+//!         NotFound
+//!     }
 //! }
+//!
+//! impl Anomaly for RecordMissing { }
 //! ```
 //!
 //! # Prior art
