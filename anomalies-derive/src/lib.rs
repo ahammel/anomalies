@@ -1,7 +1,8 @@
 use proc_macro::TokenStream;
-use quote::quote;
+use quote::{format_ident, quote};
 use syn::{DeriveInput, Error, Ident, parse_macro_input};
 
+#[derive(Debug)]
 enum Category {
     /// The requested resource or service is not currently reachable.
     ///
@@ -79,6 +80,27 @@ enum Category {
     Fault,
 }
 
+/// Clone of ::anomalies::status::Status enum for codegen purposes
+#[derive(Debug)]
+enum DefaultStatus {
+    Temporary,
+    Permanent,
+    // Persistent is never a default status
+}
+
+impl DefaultStatus {
+    fn derive_for(&self, name: &Ident) -> proc_macro2::TokenStream {
+        let status = format_ident!("{}", format!("{:?}", self));
+        quote! {
+            impl ::anomalies::anomaly::HasStatus for #name {
+                fn status(&self) -> ::anomalies::status::Status {
+                    ::anomalies::status::Status::#status
+                }
+            }
+        }
+    }
+}
+
 fn parse_category_string(input: &DeriveInput) -> Result<Category, Error> {
     for attr in &input.attrs {
         if attr.path().is_ident("category") {
@@ -115,122 +137,30 @@ pub fn derive_anomaly(input: TokenStream) -> TokenStream {
 
 fn derive_anomaly_inner(input: &DeriveInput) -> Result<proc_macro2::TokenStream, Error> {
     let name = &input.ident;
-
-    let anomaly_impl = quote! {
-        impl ::anomalies::anomaly::Anomaly for #name {}
-    };
-
     let category = parse_category_string(input)?;
-    let category_and_status_impl = match category {
-        Category::Unavailable => quote! {
-            impl ::anomalies::anomaly::HasCategory for #name {
-                fn category(&self) -> ::anomalies::category::Category {
-                    ::anomalies::category::Unavailable
-                }
-            }
+    let category_ident = format_ident!("{}", format!("{:?}", category));
 
-            impl ::anomalies::anomaly::HasStatus for #name {
-                fn status(&self) -> ::anomalies::status::Status {
-                    ::anomalies::status::Status::Temporary
-                }
-            }
-        },
-        Category::Interrupted => quote! {
-            impl ::anomalies::anomaly::HasCategory for #name {
-                fn category(&self) -> ::anomalies::category::Category {
-                    ::anomalies::category::Interrupted
-                }
-            }
-        },
-        Category::Busy => quote! {
-            impl ::anomalies::anomaly::HasCategory for #name {
-                fn category(&self) -> ::anomalies::category::Category {
-                    ::anomalies::category::Busy
-                }
-            }
-
-            impl ::anomalies::anomaly::HasStatus for #name {
-                fn status(&self) -> ::anomalies::status::Status {
-                    ::anomalies::status::Status::Temporary
-                }
-            }
-        },
-        Category::Incorrect => quote! {
-            impl ::anomalies::anomaly::HasCategory for #name {
-                fn category(&self) -> ::anomalies::category::Category {
-                    ::anomalies::category::Incorrect
-                }
-            }
-
-            impl ::anomalies::anomaly::HasStatus for #name {
-                fn status(&self) -> ::anomalies::status::Status {
-                    ::anomalies::status::Status::Permanent
-                }
-            }
-        },
-        Category::Forbidden => quote! {
-            impl ::anomalies::anomaly::HasCategory for #name {
-                fn category(&self) -> ::anomalies::category::Category {
-                    ::anomalies::category::Forbidden
-                }
-            }
-
-            impl ::anomalies::anomaly::HasStatus for #name {
-                fn status(&self) -> ::anomalies::status::Status {
-                    ::anomalies::status::Status::Permanent
-                }
-            }
-        },
-        Category::Unsupported => quote! {
-            impl ::anomalies::anomaly::HasCategory for #name {
-                fn category(&self) -> ::anomalies::category::Category {
-                    ::anomalies::category::Unsupported
-                }
-            }
-
-            impl ::anomalies::anomaly::HasStatus for #name {
-                fn status(&self) -> ::anomalies::status::Status {
-                    ::anomalies::status::Status::Permanent
-                }
-            }
-        },
-        Category::NotFound => quote! {
-            impl ::anomalies::anomaly::HasCategory for #name {
-                fn category(&self) -> ::anomalies::category::Category {
-                    ::anomalies::category::NotFound
-                }
-            }
-        },
-        Category::Conflict => quote! {
-            impl ::anomalies::anomaly::HasCategory for #name {
-                fn category(&self) -> ::anomalies::category::Category {
-                    ::anomalies::category::Conflict
-                }
-            }
-
-            impl ::anomalies::anomaly::HasStatus for #name {
-                fn status(&self) -> ::anomalies::status::Status {
-                    ::anomalies::status::Status::Permanent
-                }
-            }
-        },
-        Category::Fault => quote! {
-            impl ::anomalies::anomaly::HasCategory for #name {
-                fn category(&self) -> ::anomalies::category::Category {
-                    ::anomalies::category::Fault
-                }
-            }
-
-            impl ::anomalies::anomaly::HasStatus for #name {
-                fn status(&self) -> ::anomalies::status::Status {
-                    ::anomalies::status::Status::Permanent
-                }
-            }
-        },
+    let status_impl = match category {
+        Category::Unavailable => DefaultStatus::Temporary.derive_for(name),
+        Category::Interrupted => quote! {}, // implementer provides status
+        Category::Busy => DefaultStatus::Temporary.derive_for(name),
+        Category::Incorrect => DefaultStatus::Permanent.derive_for(name),
+        Category::Forbidden => DefaultStatus::Permanent.derive_for(name),
+        Category::Unsupported => DefaultStatus::Permanent.derive_for(name),
+        Category::NotFound => quote! {}, // implementer provides status
+        Category::Conflict => DefaultStatus::Permanent.derive_for(name),
+        Category::Fault => DefaultStatus::Permanent.derive_for(name),
     };
 
     Ok(quote! {
-        #anomaly_impl
-        #category_and_status_impl
+        impl ::anomalies::anomaly::Anomaly for #name {}
+
+        impl ::anomalies::anomaly::HasCategory for #name {
+            fn category(&self) -> ::anomalies::category::Category {
+                ::anomalies::category::#category_ident
+            }
+        }
+
+        #status_impl
     })
 }
