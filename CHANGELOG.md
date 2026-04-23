@@ -1,6 +1,12 @@
 # Changelog
 
-## [Unreleased] — 0.2.0
+## [0.2.1] — 2026-04-23
+
+### Fixed
+
+- `readme` path in `anomalies/Cargo.toml` corrected to `../README.md` so `cargo publish` can locate it.
+
+## [0.2.0] — 2026-04-23
 
 ### Breaking changes
 
