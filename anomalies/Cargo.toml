@@ -1,6 +1,6 @@
 [package]
 name = "anomalies"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 description = "Structured, categorized error handling inspired by Cognitect's anomalies"
 license = "MIT OR Apache-2.0"
@@ -10,7 +10,7 @@ keywords = ["error", "error-handling", "anomaly"]
 categories = ["rust-patterns"]
 
 [dependencies]
-anomalies-derive = { path = "../anomalies-derive" }
+anomalies-derive = { path = "../anomalies-derive", version = "0.2.0" }
 
 [dev-dependencies]
 trybuild = "1"
