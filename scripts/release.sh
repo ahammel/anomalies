@@ -19,6 +19,9 @@ sed -i '' "s/^version = \".*\"/version = \"$VERSION\"/" anomalies-derive/Cargo.t
 # Pin the intra-workspace dep so crates.io can resolve it after publish
 sed -i '' "s|anomalies-derive = { path = \"../anomalies-derive\" }|anomalies-derive = { path = \"../anomalies-derive\", version = \"$VERSION\" }|" anomalies/Cargo.toml
 
+# Settle Cargo.lock before staging so the commit is self-contained
+cargo check --all
+
 confirm "git add anomalies/Cargo.toml anomalies-derive/Cargo.toml Cargo.lock" &&
     git add anomalies/Cargo.toml anomalies-derive/Cargo.toml Cargo.lock
 
