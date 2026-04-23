@@ -27,6 +27,8 @@ use std::error::Error;
 
 use crate::{category::Category, status::Status};
 
+pub use anomalies_derive::Anomaly;
+
 /// A structured error that carries a [`Category`] and a retry [`Status`].
 ///
 /// Implementing by hand:
