@@ -1,0 +1,5 @@
+error: expected `unavailable`, `interrupted`, `busy`, `incorrect`, `forbidden`, `unsupported`, `conflict`, `not_found`, or `fault`
+ --> tests/ui/unknown_category.rs:4:12
+  |
+4 | #[category(bogus)]
+  |            ^^^^^

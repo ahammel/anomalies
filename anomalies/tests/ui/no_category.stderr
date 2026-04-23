@@ -1,0 +1,5 @@
+error: expected `#[category(...)]` attribute
+ --> tests/ui/no_category.rs:4:1
+  |
+4 | struct MyError;
+  | ^^^^^^^^^^^^^^^

@@ -124,7 +124,10 @@ fn parse_category_string(input: &DeriveInput) -> Result<Category, Error> {
             };
         }
     }
-    Err(Error::new_spanned(input, "expected `category` attribue"))
+    Err(Error::new_spanned(
+        input,
+        "expected `#[category(...)]` attribute",
+    ))
 }
 
 #[proc_macro_derive(Anomaly, attributes(category))]

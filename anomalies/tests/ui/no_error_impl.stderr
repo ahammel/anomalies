@@ -1,0 +1,16 @@
+error[E0277]: the trait bound `MyError: std::error::Error` is not satisfied
+ --> tests/ui/no_error_impl.rs:7:8
+  |
+7 | struct MyError;
+  |        ^^^^^^^ unsatisfied trait bound
+  |
+help: the trait `std::error::Error` is not implemented for `MyError`
+ --> tests/ui/no_error_impl.rs:7:1
+  |
+7 | struct MyError;
+  | ^^^^^^^^^^^^^^
+note: required by a bound in `Anomaly`
+ --> src/anomaly.rs
+  |
+  | pub trait Anomaly: Error + HasCategory + HasStatus {}
+  |                    ^^^^^ required by this bound in `Anomaly`
