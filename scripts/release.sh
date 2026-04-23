@@ -12,11 +12,15 @@ confirm() {
     esac
 }
 
-# Bump version in Cargo.toml
-sed -i '' "s/^version = \".*\"/version = \"$VERSION\"/" Cargo.toml
+# Bump version in both crate manifests
+sed -i '' "s/^version = \".*\"/version = \"$VERSION\"/" anomalies/Cargo.toml
+sed -i '' "s/^version = \".*\"/version = \"$VERSION\"/" anomalies-derive/Cargo.toml
 
-confirm "git add Cargo.toml Cargo.lock" &&
-    git add Cargo.toml Cargo.lock
+# Pin the intra-workspace dep so crates.io can resolve it after publish
+sed -i '' "s|anomalies-derive = { path = \"../anomalies-derive\" }|anomalies-derive = { path = \"../anomalies-derive\", version = \"$VERSION\" }|" anomalies/Cargo.toml
+
+confirm "git add anomalies/Cargo.toml anomalies-derive/Cargo.toml Cargo.lock" &&
+    git add anomalies/Cargo.toml anomalies-derive/Cargo.toml Cargo.lock
 
 confirm "git commit -m '🔖 v$VERSION'" &&
     git commit -m "🔖 v$VERSION"
@@ -27,5 +31,12 @@ confirm "git tag v$VERSION" &&
 confirm "git push origin main v$VERSION" &&
     git push origin main "v$VERSION"
 
-confirm "cargo publish" &&
-    cargo publish
+# anomalies-derive must land on the registry before anomalies can reference it
+confirm "cargo publish -p anomalies-derive" &&
+    cargo publish -p anomalies-derive
+
+echo "Waiting for anomalies-derive v$VERSION to become available on crates.io..."
+sleep 10
+
+confirm "cargo publish -p anomalies" &&
+    cargo publish -p anomalies
