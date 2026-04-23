@@ -20,11 +20,18 @@ pub struct Category(&'static str);
 impl Category {
     /// Creates a new category with the given name.
     ///
-    /// Use this to define custom categories outside the crate:
+    /// This exists to prototype additions to this library's category vocabulary, not to
+    /// define application-specific sub-categories. A good candidate is a broad, cross-cutting
+    /// error class that is absent from this library and would be meaningful to any caller —
+    /// something on the same level as [`Unavailable`] or [`Fault`]. If you want finer-grained
+    /// classification (e.g. distinguishing violations of various different rate limiting
+    /// policies), add a custom enum field or similar to your error type.
     ///
     /// ```rust
     /// use anomalies::category::Category;
-    /// pub static RateLimited: Category = Category::new("rate-limited");
+    ///
+    /// // Prototyping a new top-level category for upstream consideration:
+    /// pub static RichGirl: Category = Category::new("rich-girl");
     /// ```
     pub const fn new(name: &'static str) -> Self {
         Category(name)

@@ -16,37 +16,53 @@ Three orthogonal concepts:
 
 - **status** — *should the caller retry?* `Status::Temporary` means the same request might succeed later; `Status::Permanent` means it won't.
 
-- **anomaly** — a `std::error::Error` with a category and a status. `Anomaly<C>` is the base trait; each category has a convenience sub-trait (e.g. `anomaly::NotFound`) with sensible defaults so implementors only override what they need to.
+- **anomaly** — a `std::error::Error` with a category and a status. Derive `Anomaly` with a `#[category(...)]` attribute to get a full implementation, or implement `HasCategory` and `HasStatus` by hand and add an empty `impl Anomaly for YourType {}`.
 
 ## Categories
 
 **Fix** — an example of how a programmer or operator might resolve the problem.  
 **Song** — the Hall & Oates song associated with this category, courtesy of [Cognitect's anomalies](https://github.com/cognitect-labs/anomalies).
 
-| Trait | `status()` default | Fix | Song |
+| `#[category(...)]` | `status()` default | Fix | Song |
 |---|---|---|---|
-| `Unavailable` | `Temporary` | make sure callee is healthy | Out of Touch |
-| `Interrupted` | — | stop interrupting | It Doesn't Matter Anymore |
-| `Busy` | `Temporary` | backoff and retry | Wait For Me |
-| `Incorrect` | `Permanent` | fix caller bug | You'll Never Learn |
-| `Forbidden` | `Permanent` | fix caller creds | I Can't Go For That |
-| `Unsupported` | `Permanent` | fix caller verb | Your Imagination |
-| `NotFound` | — | fix caller noun | She's Gone |
-| `Conflict` | `Permanent` | coordinate with callee | Give It Up |
-| `Fault` | `Permanent` | fix callee bug | Falling |
+| `unavailable` | `Temporary` | make sure callee is healthy | Out of Touch |
+| `interrupted` | — | stop interrupting | It Doesn't Matter Anymore |
+| `busy` | `Temporary` | backoff and retry | Wait For Me |
+| `incorrect` | `Permanent` | fix caller bug | You'll Never Learn |
+| `forbidden` | `Permanent` | fix caller creds | I Can't Go For That |
+| `unsupported` | `Permanent` | fix caller verb | Your Imagination |
+| `not_found` | — | fix caller noun | She's Gone |
+| `conflict` | `Permanent` | coordinate with callee | Give It Up |
+| `fault` | `Permanent` | fix callee bug | Falling |
 
 `Interrupted` and `NotFound` have no default status because the right answer depends on context. For all other categories the status is fixed and the impl block can be empty.
 
 ## Usage
 
-Implement one of the category-specific sub-traits on your error type:
+Derive `Anomaly` and tag your type with the appropriate `#[category(...)]`. Categories with a
+fixed default status generate a `HasStatus` impl automatically; `interrupted` and `not_found`
+require you to provide one:
 
 ```rust
 use std::fmt;
-use anomalies::anomaly;
+use anomalies::anomaly::{Anomaly, HasStatus};
 use anomalies::status::Status;
 
-#[derive(Debug)]
+// `fault` has a fixed default status — only Display and Error are needed.
+#[derive(Anomaly, Debug)]
+#[category(fault)]
+struct DbConnectionFailed;
+
+impl fmt::Display for DbConnectionFailed {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "database connection failed")
+    }
+}
+impl std::error::Error for DbConnectionFailed {}
+
+// `not_found` has no default status — provide HasStatus explicitly.
+#[derive(Anomaly, Debug)]
+#[category(not_found)]
 struct RecordMissing { id: u64 }
 
 impl fmt::Display for RecordMissing {
@@ -54,28 +70,19 @@ impl fmt::Display for RecordMissing {
         write!(f, "record {} not found", self.id)
     }
 }
-
 impl std::error::Error for RecordMissing {}
-
-impl anomaly::NotFound for RecordMissing {
+impl HasStatus for RecordMissing {
     fn status(&self) -> Status { Status::Permanent }
 }
 ```
 
-For categories with unambiguous status, the impl block can be completely empty:
+A generic caller can branch on category or status without knowing the concrete type:
 
 ```rust
-impl anomaly::Incorrect for BadInput {}
-```
-
-A generic caller can then branch on category or status without knowing the concrete type:
-
-```rust
-use anomalies::anomaly::Anomaly;
-use anomalies::category::Category;
+use anomalies::anomaly::{Anomaly, HasStatus};
 use anomalies::status::Status;
 
-fn should_retry(e: &dyn Anomaly<impl Category>) -> bool {
+fn should_retry(e: &dyn Anomaly) -> bool {
     e.status() == Status::Temporary
 }
 ```

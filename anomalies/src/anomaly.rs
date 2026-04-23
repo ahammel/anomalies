@@ -1,9 +1,9 @@
 //! Traits for structured, categorized errors.
 //!
-//! [`Anomaly`] is the base trait. Implement [`HasCategory`] and [`HasStatus`] on your
-//! error type, then add an empty `impl Anomaly for YourType {}` to opt in to the trait
-//! bound. Callers can then accept `impl Anomaly` and inspect the category or status
-//! without knowing the concrete type.
+//! [`Anomaly`] is the base trait. Derive it with `#[derive(Anomaly)]` and a
+//! `#[category(...)]` attribute, or implement [`HasCategory`] and [`HasStatus`] by hand
+//! and add an empty `impl Anomaly for YourType {}`. Callers can accept `impl Anomaly` and
+//! inspect the category or status without knowing the concrete type.
 //!
 //! ## Choosing a trait
 //!
@@ -11,17 +11,17 @@
 //! **Song** — the Hall & Oates song associated with this category, courtesy of
 //! [Cognitect's anomalies](https://github.com/cognitect-labs/anomalies).
 //!
-//! | Trait | `status()` convention | Fix | Song |
+//! | `#[category(...)]` | `status()` default | Fix | Song |
 //! |---|---|---|---|
-//! | [`Unavailable`] | `Temporary` | make sure callee is healthy | Out of Touch |
-//! | [`Interrupted`] | caller decides | stop interrupting | It Doesn't Matter Anymore |
-//! | [`Busy`] | `Temporary` | backoff and retry | Wait For Me |
-//! | [`Incorrect`] | `Permanent` | fix caller bug | You'll Never Learn |
-//! | [`Forbidden`] | `Permanent` | fix caller creds | I Can't Go For That |
-//! | [`Unsupported`] | `Permanent` | fix caller verb | Your Imagination |
-//! | [`NotFound`] | caller decides | fix caller noun | She's Gone |
-//! | [`Conflict`] | `Permanent` | coordinate with callee | Give It Up |
-//! | [`Fault`] | `Permanent` | fix callee bug | Falling |
+//! | `unavailable` | `Temporary` | make sure callee is healthy | Out of Touch |
+//! | `interrupted` | caller decides | stop interrupting | It Doesn't Matter Anymore |
+//! | `busy` | `Temporary` | backoff and retry | Wait For Me |
+//! | `incorrect` | `Permanent` | fix caller bug | You'll Never Learn |
+//! | `forbidden` | `Permanent` | fix caller creds | I Can't Go For That |
+//! | `unsupported` | `Permanent` | fix caller verb | Your Imagination |
+//! | `not_found` | caller decides | fix caller noun | She's Gone |
+//! | `conflict` | `Permanent` | coordinate with callee | Give It Up |
+//! | `fault` | `Permanent` | fix callee bug | Falling |
 
 use std::error::Error;
 

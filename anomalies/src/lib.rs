@@ -25,20 +25,22 @@
 //!   request might succeed later; [`status::Status::Permanent`] means it won't.
 //!
 //! - **[`anomaly`]** — a [`std::error::Error`] with a [`category::Category`] and a [`status::Status`].
-//!   [`anomaly::Anomaly`] is the base trait; implement [`anomaly::HasCategory`] and
-//!   [`anomaly::HasStatus`] on your error type, then add an empty `impl Anomaly for YourType {}`.
+//!   Derive [`anomaly::Anomaly`] with a `#[category(...)]` attribute, or implement
+//!   [`anomaly::HasCategory`] and [`anomaly::HasStatus`] by hand and add an empty
+//!   `impl Anomaly for YourType {}`.
 //!
 //! # Usage
 //!
-//! Implement one of the category-specific sub-traits on your error type:
+//! Derive `Anomaly` and tag your type with the appropriate `#[category(...)]`:
 //!
 //! ```rust
 //! use std::fmt;
-//! use anomalies::anomaly::{Anomaly, HasCategory, HasStatus};
-//! use anomalies::category::{Category, NotFound};
+//! use anomalies::anomaly::{Anomaly, HasStatus};
 //! use anomalies::status::Status;
 //!
-//! #[derive(Debug)]
+//! // `not_found` has no default status — provide HasStatus explicitly.
+//! #[derive(Anomaly, Debug)]
+//! #[category(not_found)]
 //! struct RecordMissing { id: u64 }
 //!
 //! impl fmt::Display for RecordMissing {
@@ -46,20 +48,10 @@
 //!         write!(f, "record {} not found", self.id)
 //!     }
 //! }
-//!
 //! impl std::error::Error for RecordMissing {}
-//!
 //! impl HasStatus for RecordMissing {
 //!     fn status(&self) -> Status { Status::Permanent }
 //! }
-//!
-//! impl HasCategory for RecordMissing {
-//!     fn category(&self) -> Category {
-//!         NotFound
-//!     }
-//! }
-//!
-//! impl Anomaly for RecordMissing { }
 //! ```
 //!
 //! # Prior art
