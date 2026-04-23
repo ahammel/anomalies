@@ -87,6 +87,19 @@ fn should_retry(e: &dyn Anomaly) -> bool {
 }
 ```
 
+## Versioning
+
+This crate uses a modified semantic versioning policy designed for long-term stability.
+
+**Version 0.x (current):** the API is still being shaped.
+- Patch bumps (`0.1.0 → 0.1.1`) are non-breaking.
+- Minor bumps (`0.1 → 0.2`) may include breaking changes.
+
+**Version 1.x (future):** the API is stable.
+- Minor bumps (`1.0 → 1.1`) add new features without breaking existing code.
+- Patch bumps (`1.0.0 → 1.0.1`) are bug fixes and other non-functional changes.
+- Breaking changes will never be released. There will never be a version 2.
+
 ## Prior art
 
 - [**Cognitect anomalies**](https://github.com/cognitect-labs/anomalies) — the original Clojure library this crate is modelled on. Defines the category vocabulary used here.
