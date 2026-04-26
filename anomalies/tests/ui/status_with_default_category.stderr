@@ -1,0 +1,5 @@
+error: `#[status(...)]` is only valid for categories without a default (`interrupted`, `not_found`)
+ --> tests/ui/status_with_default_category.rs:8:10
+  |
+8 | #[status(temporary)]
+  |          ^^^^^^^^^

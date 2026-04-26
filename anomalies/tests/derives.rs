@@ -92,6 +92,28 @@ impl Display for ShesGone {
 }
 
 #[derive(Anomaly, Debug)]
+#[category(not_found)]
+#[status(permanent)]
+struct SoCloseYetSoFarAway();
+impl Error for SoCloseYetSoFarAway {}
+impl Display for SoCloseYetSoFarAway {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        write!(f, "{}", "I guess I'll never know")
+    }
+}
+
+#[derive(Anomaly, Debug)]
+#[category(interrupted)]
+#[status(temporary)]
+struct StopLovinMe();
+impl Error for StopLovinMe {}
+impl Display for StopLovinMe {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        write!(f, "{}", "I can't make it without you")
+    }
+}
+
+#[derive(Anomaly, Debug)]
 #[category(conflict)]
 struct GiveItUp();
 impl Error for GiveItUp {}
@@ -179,6 +201,26 @@ fn shes_gone_has_category_not_found() {
 #[test]
 fn shes_gone_has_status_set_by_implementer() {
     assert_eq!(ShesGone().status(), Status::Persistent)
+}
+
+#[test]
+fn so_close_yet_so_far_away_has_category_not_found() {
+    assert_eq!(SoCloseYetSoFarAway().category(), NotFound)
+}
+
+#[test]
+fn so_close_yet_so_far_away_has_status_permanent_from_attribute() {
+    assert_eq!(SoCloseYetSoFarAway().status(), Status::Permanent)
+}
+
+#[test]
+fn stop_lovin_me_has_category_interrupted() {
+    assert_eq!(StopLovinMe().category(), Interrupted)
+}
+
+#[test]
+fn stop_lovin_me_has_status_temporary_from_attribute() {
+    assert_eq!(StopLovinMe().status(), Status::Temporary)
 }
 
 #[test]

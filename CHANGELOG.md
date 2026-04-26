@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.2.2] — unreleased
+
+### New
+
+- `#[status(temporary|permanent|persistent)]` attribute on `#[derive(Anomaly)]`. For the two categories without a default status (`interrupted`, `not_found`), you can now set a static status at the derive site instead of writing a manual `impl HasStatus`. Using `#[status(...)]` on a category that already has a default is a compile-time error.
+
 ## [0.2.1] — 2026-04-23
 
 ### Fixed
