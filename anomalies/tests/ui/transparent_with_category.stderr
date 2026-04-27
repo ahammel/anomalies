@@ -1,0 +1,5 @@
+error: `#[anomaly(transparent)]` cannot be combined with `#[category(...)]`
+  --> tests/ui/transparent_with_category.rs:11:15
+   |
+11 |     #[anomaly(transparent)]
+   |               ^^^^^^^^^^^

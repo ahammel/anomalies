@@ -1,0 +1,5 @@
+error: `#[anomaly(transparent)]` requires exactly one field
+  --> tests/ui/transparent_unit_variant.rs:11:5
+   |
+11 |     Bad,
+   |     ^^^

@@ -1,4 +1,4 @@
-error: expected `#[category(...)]` attribute on variant
+error: expected `#[category(...)]` or `#[anomaly(transparent)]` on variant
   --> tests/ui/enum_no_category.rs:10:5
    |
 10 |     Missing,

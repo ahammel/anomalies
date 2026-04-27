@@ -1,0 +1,35 @@
+error[E0277]: the trait bound `NotAnAnomaly: HasCategory` is not satisfied
+ --> tests/ui/transparent_no_anomaly_impl.rs:9:10
+  |
+9 | #[derive(Anomaly, Debug)]
+  |          ^^^^^^^ unsatisfied trait bound
+  |
+help: the trait `HasCategory` is not implemented for `NotAnAnomaly`
+ --> tests/ui/transparent_no_anomaly_impl.rs:7:1
+  |
+7 | struct NotAnAnomaly(String);
+  | ^^^^^^^^^^^^^^^^^^^
+help: the trait `HasCategory` is implemented for `MyError`
+ --> tests/ui/transparent_no_anomaly_impl.rs:9:10
+  |
+9 | #[derive(Anomaly, Debug)]
+  |          ^^^^^^^
+  = note: this error originates in the derive macro `Anomaly` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0277]: the trait bound `NotAnAnomaly: HasStatus` is not satisfied
+ --> tests/ui/transparent_no_anomaly_impl.rs:9:10
+  |
+9 | #[derive(Anomaly, Debug)]
+  |          ^^^^^^^ unsatisfied trait bound
+  |
+help: the trait `HasStatus` is not implemented for `NotAnAnomaly`
+ --> tests/ui/transparent_no_anomaly_impl.rs:7:1
+  |
+7 | struct NotAnAnomaly(String);
+  | ^^^^^^^^^^^^^^^^^^^
+help: the trait `HasStatus` is implemented for `MyError`
+ --> tests/ui/transparent_no_anomaly_impl.rs:9:10
+  |
+9 | #[derive(Anomaly, Debug)]
+  |          ^^^^^^^
+  = note: this error originates in the derive macro `Anomaly` (in Nightly builds, run with -Z macro-backtrace for more info)

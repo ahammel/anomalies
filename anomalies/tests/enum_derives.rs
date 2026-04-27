@@ -1,7 +1,7 @@
 use std::fmt::{Display, Formatter, Result};
 
 use anomalies::anomaly::{Anomaly, HasCategory, HasStatus};
-use anomalies::category::{Busy, Fault, Forbidden, NotFound};
+use anomalies::category::{Busy, Fault, Forbidden, Interrupted, NotFound};
 use anomalies::status::Status;
 
 // ── Plain enum ────────────────────────────────────────────────────────────────
@@ -155,5 +155,112 @@ fn thiserror_display_is_unaffected() {
     assert_eq!(
         VoicesCarry::ShesGone("Record Row".into()).to_string(),
         "she's gone: Record Row"
+    )
+}
+
+// ── Transparent delegation ────────────────────────────────────────────────────
+//
+// A variant with #[anomaly(transparent)] delegates HasCategory and HasStatus
+// to its single inner field, allowing runtime-varying status alongside
+// statically-categorised variants in the same enum.
+
+#[derive(Debug)]
+struct ContextualInterrupt {
+    is_permanent: bool,
+}
+
+impl std::error::Error for ContextualInterrupt {}
+impl Display for ContextualInterrupt {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        write!(f, "interrupted")
+    }
+}
+impl HasCategory for ContextualInterrupt {
+    fn category(&self) -> anomalies::category::Category {
+        Interrupted
+    }
+}
+impl HasStatus for ContextualInterrupt {
+    fn status(&self) -> Status {
+        if self.is_permanent {
+            Status::Permanent
+        } else {
+            Status::Temporary
+        }
+    }
+}
+impl Anomaly for ContextualInterrupt {}
+
+#[derive(Anomaly, Debug)]
+enum MixedError {
+    #[category(not_found)]
+    #[status(permanent)]
+    Missing,
+
+    #[category(fault)]
+    BadThing,
+
+    #[anomaly(transparent)]
+    Interrupted(ContextualInterrupt),
+}
+
+impl std::error::Error for MixedError {}
+impl Display for MixedError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        match self {
+            Self::Missing => write!(f, "missing"),
+            Self::BadThing => write!(f, "bad thing"),
+            Self::Interrupted(inner) => write!(f, "{inner}"),
+        }
+    }
+}
+
+#[test]
+fn mixed_missing_has_category_not_found() {
+    assert_eq!(MixedError::Missing.category(), NotFound)
+}
+
+#[test]
+fn mixed_missing_has_status_permanent() {
+    assert_eq!(MixedError::Missing.status(), Status::Permanent)
+}
+
+#[test]
+fn mixed_bad_thing_has_category_fault() {
+    assert_eq!(MixedError::BadThing.category(), Fault)
+}
+
+#[test]
+fn mixed_bad_thing_has_status_permanent_by_default() {
+    assert_eq!(MixedError::BadThing.status(), Status::Permanent)
+}
+
+#[test]
+fn mixed_interrupted_temporary_delegates_category() {
+    assert_eq!(
+        MixedError::Interrupted(ContextualInterrupt {
+            is_permanent: false
+        })
+        .category(),
+        Interrupted
+    )
+}
+
+#[test]
+fn mixed_interrupted_temporary_delegates_status() {
+    assert_eq!(
+        MixedError::Interrupted(ContextualInterrupt {
+            is_permanent: false
+        })
+        .status(),
+        Status::Temporary
+    )
+}
+
+#[test]
+fn mixed_interrupted_permanent_delegates_status() {
+    assert_eq!(
+        MixedError::Interrupted(ContextualInterrupt { is_permanent: true }).status(),
+        Status::Permanent
     )
 }
