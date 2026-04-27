@@ -24,23 +24,37 @@
 //! - **[`status`]** — *should the caller retry?* [`status::Status::Temporary`] means the same
 //!   request might succeed later; [`status::Status::Permanent`] means it won't.
 //!
-//! - **[`anomaly`]** — a [`std::error::Error`] with a [`category::Category`] and a [`status::Status`].
-//!   Derive [`anomaly::Anomaly`] with a `#[category(...)]` attribute, or implement
-//!   [`anomaly::HasCategory`] and [`anomaly::HasStatus`] by hand and add an empty
-//!   `impl Anomaly for YourType {}`.
+//! - **[`anomaly`]** — a [`std::error::Error`] with a [`category::Category`] and a
+//!   [`status::Status`]. Derive [`anomaly::Anomaly`] on a struct or enum with `#[category(...)]`
+//!   (and optionally `#[status(...)]`) attributes, or implement [`anomaly::HasCategory`] and
+//!   [`anomaly::HasStatus`] by hand and add an empty `impl Anomaly for YourType {}`.
 //!
 //! # Usage
 //!
-//! Derive `Anomaly` and tag your type with the appropriate `#[category(...)]`:
+//! Derive `Anomaly` and tag each type (or variant) with `#[category(...)]`. Categories with a
+//! fixed default status need nothing else; for `interrupted` and `not_found`, add
+//! `#[status(...)]` to set a static retry status at the derive site:
 //!
 //! ```rust
 //! use std::fmt;
-//! use anomalies::anomaly::{Anomaly, HasStatus};
-//! use anomalies::status::Status;
+//! use anomalies::anomaly::Anomaly;
 //!
-//! // `not_found` has no default status — provide HasStatus explicitly.
+//! // `fault` has a fixed default status — only Display and Error are needed.
+//! #[derive(Anomaly, Debug)]
+//! #[category(fault)]
+//! struct DbConnectionFailed;
+//!
+//! impl fmt::Display for DbConnectionFailed {
+//!     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+//!         write!(f, "database connection failed")
+//!     }
+//! }
+//! impl std::error::Error for DbConnectionFailed {}
+//!
+//! // `not_found` has no default — set one with #[status(...)].
 //! #[derive(Anomaly, Debug)]
 //! #[category(not_found)]
+//! #[status(permanent)]
 //! struct RecordMissing { id: u64 }
 //!
 //! impl fmt::Display for RecordMissing {
@@ -49,9 +63,34 @@
 //!     }
 //! }
 //! impl std::error::Error for RecordMissing {}
-//! impl HasStatus for RecordMissing {
-//!     fn status(&self) -> Status { Status::Permanent }
+//! ```
+//!
+//! Enums are also supported — each variant gets its own `#[category(...)]` and
+//! `#[status(...)]` where required:
+//!
+//! ```rust
+//! use std::fmt;
+//! use anomalies::anomaly::Anomaly;
+//!
+//! #[derive(Anomaly, Debug)]
+//! enum RepoError {
+//!     #[category(not_found)]
+//!     #[status(permanent)]
+//!     Missing { id: u64 },
+//!
+//!     #[category(fault)]
+//!     Unexpected(String),
 //! }
+//!
+//! impl fmt::Display for RepoError {
+//!     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+//!         match self {
+//!             Self::Missing { id } => write!(f, "record {id} not found"),
+//!             Self::Unexpected(msg) => write!(f, "unexpected error: {msg}"),
+//!         }
+//!     }
+//! }
+//! impl std::error::Error for RepoError {}
 //! ```
 //!
 //! # Prior art

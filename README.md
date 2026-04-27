@@ -16,7 +16,7 @@ Three orthogonal concepts:
 
 - **status** — *should the caller retry?* `Status::Temporary` means the same request might succeed later; `Status::Permanent` means it won't.
 
-- **anomaly** — a `std::error::Error` with a category and a status. Derive `Anomaly` with a `#[category(...)]` attribute to get a full implementation, or implement `HasCategory` and `HasStatus` by hand and add an empty `impl Anomaly for YourType {}`.
+- **anomaly** — a `std::error::Error` with a category and a status. Derive `Anomaly` on a struct or enum with `#[category(...)]` (and optionally `#[status(...)]`) attributes to get a full implementation, or implement `HasCategory` and `HasStatus` by hand and add an empty `impl Anomaly for YourType {}`.
 
 ## Categories
 
@@ -35,18 +35,20 @@ Three orthogonal concepts:
 | `conflict` | `Permanent` | coordinate with callee | Give It Up |
 | `fault` | `Permanent` | fix callee bug | Falling |
 
-`Interrupted` and `NotFound` have no default status because the right answer depends on context. For all other categories the status is fixed and the impl block can be empty.
+`interrupted` and `not_found` have no default status because the right answer depends on context.
+For all other categories the status is fixed.
 
 ## Usage
 
-Derive `Anomaly` and tag your type with the appropriate `#[category(...)]`. Categories with a
-fixed default status generate a `HasStatus` impl automatically; `interrupted` and `not_found`
-require you to provide one:
+### Structs
+
+Derive `Anomaly` and tag your struct with `#[category(...)]`. Categories with a fixed default
+status need nothing else; for `interrupted` and `not_found`, add `#[status(...)]` to set a
+static status at the derive site:
 
 ```rust
 use std::fmt;
-use anomalies::anomaly::{Anomaly, HasStatus};
-use anomalies::status::Status;
+use anomalies::anomaly::Anomaly;
 
 // `fault` has a fixed default status — only Display and Error are needed.
 #[derive(Anomaly, Debug)]
@@ -60,9 +62,10 @@ impl fmt::Display for DbConnectionFailed {
 }
 impl std::error::Error for DbConnectionFailed {}
 
-// `not_found` has no default status — provide HasStatus explicitly.
+// `not_found` has no default — set one with #[status(...)].
 #[derive(Anomaly, Debug)]
 #[category(not_found)]
+#[status(permanent)]
 struct RecordMissing { id: u64 }
 
 impl fmt::Display for RecordMissing {
@@ -71,15 +74,49 @@ impl fmt::Display for RecordMissing {
     }
 }
 impl std::error::Error for RecordMissing {}
-impl HasStatus for RecordMissing {
-    fn status(&self) -> Status { Status::Permanent }
-}
 ```
 
-A generic caller can branch on category or status without knowing the concrete type:
+If the status needs to vary at runtime (e.g. `interrupted` where retry depends on whether the
+work was committed), implement `HasStatus` by hand instead of using `#[status(...)]`.
+
+### Enums
+
+Each variant carries its own `#[category(...)]` and optional `#[status(...)]`:
 
 ```rust
-use anomalies::anomaly::{Anomaly, HasStatus};
+use std::fmt;
+use anomalies::anomaly::Anomaly;
+
+#[derive(Anomaly, Debug)]
+enum RepoError {
+    #[category(not_found)]
+    #[status(permanent)]
+    Missing { id: u64 },
+
+    #[category(fault)]
+    Unexpected(String),
+}
+
+impl fmt::Display for RepoError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Missing { id } => write!(f, "record {id} not found"),
+            Self::Unexpected(msg) => write!(f, "unexpected error: {msg}"),
+        }
+    }
+}
+impl std::error::Error for RepoError {}
+```
+
+`thiserror`'s `#[error(...)]` attribute coexists with `#[category(...)]` / `#[status(...)]`
+on the same variants without conflict.
+
+### Generic callers
+
+A caller can branch on category or status without knowing the concrete type:
+
+```rust
+use anomalies::anomaly::Anomaly;
 use anomalies::status::Status;
 
 fn should_retry(e: &dyn Anomaly) -> bool {

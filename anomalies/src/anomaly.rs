@@ -1,11 +1,15 @@
 //! Traits for structured, categorized errors.
 //!
-//! [`Anomaly`] is the base trait. Derive it with `#[derive(Anomaly)]` and a
-//! `#[category(...)]` attribute, or implement [`HasCategory`] and [`HasStatus`] by hand
-//! and add an empty `impl Anomaly for YourType {}`. Callers can accept `impl Anomaly` and
-//! inspect the category or status without knowing the concrete type.
+//! [`Anomaly`] is the base trait. Derive it with `#[derive(Anomaly)]` on a struct or enum,
+//! tagging each type or variant with `#[category(...)]`. For `interrupted` and `not_found` —
+//! the two categories without a fixed default status — add `#[status(...)]` to set a static
+//! retry status at the derive site, or implement [`HasStatus`] by hand if the status needs to
+//! vary at runtime. For all other categories the `HasStatus` impl is generated automatically.
 //!
-//! ## Choosing a trait
+//! Callers can accept `impl Anomaly` and inspect the category or status without knowing the
+//! concrete type.
+//!
+//! ## Choosing a category
 //!
 //! **Fix** — an example of how a programmer or operator might resolve the problem.
 //! **Song** — the Hall & Oates song associated with this category, courtesy of
@@ -14,12 +18,12 @@
 //! | `#[category(...)]` | `status()` default | Fix | Song |
 //! |---|---|---|---|
 //! | `unavailable` | `Temporary` | make sure callee is healthy | Out of Touch |
-//! | `interrupted` | caller decides | stop interrupting | It Doesn't Matter Anymore |
+//! | `interrupted` | context dependent | stop interrupting | It Doesn't Matter Anymore |
 //! | `busy` | `Temporary` | backoff and retry | Wait For Me |
 //! | `incorrect` | `Permanent` | fix caller bug | You'll Never Learn |
 //! | `forbidden` | `Permanent` | fix caller creds | I Can't Go For That |
 //! | `unsupported` | `Permanent` | fix caller verb | Your Imagination |
-//! | `not_found` | caller decides | fix caller noun | She's Gone |
+//! | `not_found` | — use `#[status(...)]` | fix caller noun | She's Gone |
 //! | `conflict` | `Permanent` | coordinate with callee | Give It Up |
 //! | `fault` | `Permanent` | fix callee bug | Falling |
 

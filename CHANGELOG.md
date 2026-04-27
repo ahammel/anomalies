@@ -5,6 +5,7 @@
 ### New
 
 - `#[status(temporary|permanent|persistent)]` attribute on `#[derive(Anomaly)]`. For the two categories without a default status (`interrupted`, `not_found`), you can now set a static status at the derive site instead of writing a manual `impl HasStatus`. Using `#[status(...)]` on a category that already has a default is a compile-time error.
+- `#[derive(Anomaly)]` now works on enums. Each variant carries its own `#[category(...)]` and optional `#[status(...)]` attributes; the macro generates a single `HasCategory` and `HasStatus` impl that dispatches on `self`. Compatible with `thiserror`: `#[error(...)]` and `#[category(...)]` / `#[status(...)]` coexist on the same variants without conflict.
 
 ## [0.2.1] — 2026-04-23
 
