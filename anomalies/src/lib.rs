@@ -66,11 +66,32 @@
 //! ```
 //!
 //! Enums are also supported — each variant gets its own `#[category(...)]` and
-//! `#[status(...)]` where required:
+//! `#[status(...)]` where required. Variants that wrap another [`anomaly::Anomaly`] type
+//! can use `#[anomaly(transparent)]` to delegate `category()` and `status()` to the inner
+//! value:
 //!
 //! ```rust
 //! use std::fmt;
-//! use anomalies::anomaly::Anomaly;
+//! use anomalies::anomaly::{Anomaly, HasCategory, HasStatus};
+//! use anomalies::category::{Category, Fault};
+//! use anomalies::status::Status;
+//!
+//! // An inner error type with runtime-varying status.
+//! #[derive(Debug)]
+//! struct DbError { retryable: bool }
+//! impl fmt::Display for DbError {
+//!     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { write!(f, "db error") }
+//! }
+//! impl std::error::Error for DbError {}
+//! impl HasCategory for DbError {
+//!     fn category(&self) -> Category { Fault }
+//! }
+//! impl HasStatus for DbError {
+//!     fn status(&self) -> Status {
+//!         if self.retryable { Status::Temporary } else { Status::Permanent }
+//!     }
+//! }
+//! impl Anomaly for DbError {}
 //!
 //! #[derive(Anomaly, Debug)]
 //! enum RepoError {
@@ -78,15 +99,20 @@
 //!     #[status(permanent)]
 //!     Missing { id: u64 },
 //!
-//!     #[category(fault)]
-//!     Unexpected(String),
+//!     #[category(incorrect)]
+//!     BadRequest(String),
+//!
+//!     // Delegates category() and status() to the inner DbError.
+//!     #[anomaly(transparent)]
+//!     Database(DbError),
 //! }
 //!
 //! impl fmt::Display for RepoError {
 //!     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 //!         match self {
 //!             Self::Missing { id } => write!(f, "record {id} not found"),
-//!             Self::Unexpected(msg) => write!(f, "unexpected error: {msg}"),
+//!             Self::BadRequest(msg) => write!(f, "bad request: {msg}"),
+//!             Self::Database(e) => write!(f, "database error: {e}"),
 //!         }
 //!     }
 //! }

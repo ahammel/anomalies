@@ -6,6 +6,10 @@
 //! retry status at the derive site, or implement [`HasStatus`] by hand if the status needs to
 //! vary at runtime. For all other categories the `HasStatus` impl is generated automatically.
 //!
+//! On enums, variants that wrap another [`Anomaly`] type can use `#[anomaly(transparent)]`
+//! to delegate `category()` and `status()` to the inner value, analogous to `thiserror`'s
+//! `#[error(transparent)]`.
+//!
 //! Callers can accept `impl Anomaly` and inspect the category or status without knowing the
 //! concrete type.
 //!
@@ -23,7 +27,7 @@
 //! | `incorrect` | `Permanent` | fix caller bug | You'll Never Learn |
 //! | `forbidden` | `Permanent` | fix caller creds | I Can't Go For That |
 //! | `unsupported` | `Permanent` | fix caller verb | Your Imagination |
-//! | `not_found` | — use `#[status(...)]` | fix caller noun | She's Gone |
+//! | `not_found` | context dependent | fix caller noun | She's Gone |
 //! | `conflict` | `Permanent` | coordinate with callee | Give It Up |
 //! | `fault` | `Permanent` | fix callee bug | Falling |
 

@@ -26,12 +26,12 @@ Three orthogonal concepts:
 | `#[category(...)]` | `status()` default | Fix | Song |
 |---|---|---|---|
 | `unavailable` | `Temporary` | make sure callee is healthy | Out of Touch |
-| `interrupted` | — | stop interrupting | It Doesn't Matter Anymore |
+| `interrupted` | context dependent | stop interrupting | It Doesn't Matter Anymore |
 | `busy` | `Temporary` | backoff and retry | Wait For Me |
 | `incorrect` | `Permanent` | fix caller bug | You'll Never Learn |
 | `forbidden` | `Permanent` | fix caller creds | I Can't Go For That |
 | `unsupported` | `Permanent` | fix caller verb | Your Imagination |
-| `not_found` | — | fix caller noun | She's Gone |
+| `not_found` | context dependent | fix caller noun | She's Gone |
 | `conflict` | `Permanent` | coordinate with callee | Give It Up |
 | `fault` | `Permanent` | fix callee bug | Falling |
 
@@ -110,6 +110,23 @@ impl std::error::Error for RepoError {}
 
 `thiserror`'s `#[error(...)]` attribute coexists with `#[category(...)]` / `#[status(...)]`
 on the same variants without conflict.
+
+For variants that wrap another `Anomaly` implementation, use `#[anomaly(transparent)]` to
+delegate `category()` and `status()` to the inner value:
+
+```rust
+#[derive(Anomaly, Debug)]
+enum ServiceError {
+    #[category(incorrect)]
+    BadRequest(String),
+
+    #[anomaly(transparent)]
+    Database(DbError),  // category() and status() come from DbError
+}
+```
+
+The inner type must implement `Anomaly`. `#[anomaly(transparent)]` cannot be combined with
+`#[category(...)]` or `#[status(...)]` on the same variant.
 
 ### Generic callers
 
