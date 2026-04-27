@@ -1,0 +1,5 @@
+error: variant has no default status; add `#[status(temporary|permanent|persistent)]`
+  --> tests/ui/enum_no_status.rs:11:5
+   |
+11 |     Missing(String),
+   |     ^^^^^^^

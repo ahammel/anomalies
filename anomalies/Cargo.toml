@@ -13,4 +13,5 @@ categories = ["rust-patterns"]
 anomalies-derive = { path = "../anomalies-derive", version = "0.2.0" }
 
 [dev-dependencies]
+thiserror = "2"
 trybuild = "1"

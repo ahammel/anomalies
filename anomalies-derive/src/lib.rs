@@ -1,6 +1,6 @@
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
-use syn::{DeriveInput, Error, Ident, parse_macro_input};
+use syn::{Data, DataEnum, DeriveInput, Error, Fields, Ident, parse_macro_input};
 
 #[derive(Debug)]
 enum Category {
@@ -101,20 +101,20 @@ impl StatusSpec {
     }
 }
 
-fn parse_category_string(input: &DeriveInput) -> Result<Category, Error> {
-    for attr in &input.attrs {
+fn parse_category_attrs(attrs: &[syn::Attribute]) -> Result<Option<Category>, Error> {
+    for attr in attrs {
         if attr.path().is_ident("category") {
             let mode: Ident = attr.parse_args()?;
             return match mode.to_string().as_str() {
-                "unavailable" => Ok(Category::Unavailable),
-                "interrupted" => Ok(Category::Interrupted),
-                "busy" => Ok(Category::Busy),
-                "incorrect" => Ok(Category::Incorrect),
-                "forbidden" => Ok(Category::Forbidden),
-                "unsupported" => Ok(Category::Unsupported),
-                "not_found" => Ok(Category::NotFound),
-                "conflict" => Ok(Category::Conflict),
-                "fault" => Ok(Category::Fault),
+                "unavailable" => Ok(Some(Category::Unavailable)),
+                "interrupted" => Ok(Some(Category::Interrupted)),
+                "busy" => Ok(Some(Category::Busy)),
+                "incorrect" => Ok(Some(Category::Incorrect)),
+                "forbidden" => Ok(Some(Category::Forbidden)),
+                "unsupported" => Ok(Some(Category::Unsupported)),
+                "not_found" => Ok(Some(Category::NotFound)),
+                "conflict" => Ok(Some(Category::Conflict)),
+                "fault" => Ok(Some(Category::Fault)),
                 _ => Err(Error::new_spanned(
                     &mode,
                     "expected `unavailable`, `interrupted`, `busy`, \
@@ -124,14 +124,11 @@ fn parse_category_string(input: &DeriveInput) -> Result<Category, Error> {
             };
         }
     }
-    Err(Error::new_spanned(
-        input,
-        "expected `#[category(...)]` attribute",
-    ))
+    Ok(None)
 }
 
-fn parse_status_attr(input: &DeriveInput) -> Result<Option<(Ident, StatusSpec)>, Error> {
-    for attr in &input.attrs {
+fn parse_status_attrs(attrs: &[syn::Attribute]) -> Result<Option<(Ident, StatusSpec)>, Error> {
+    for attr in attrs {
         if attr.path().is_ident("status") {
             let mode: Ident = attr.parse_args()?;
             let spec = match mode.to_string().as_str() {
@@ -173,9 +170,21 @@ pub fn derive_anomaly(input: TokenStream) -> TokenStream {
 
 fn derive_anomaly_inner(input: &DeriveInput) -> Result<proc_macro2::TokenStream, Error> {
     let name = &input.ident;
-    let category = parse_category_string(input)?;
+    match &input.data {
+        Data::Struct(_) => derive_struct(name, input),
+        Data::Enum(data) => derive_enum(name, data),
+        Data::Union(_) => Err(Error::new_spanned(
+            input,
+            "#[derive(Anomaly)] is not supported for unions",
+        )),
+    }
+}
+
+fn derive_struct(name: &Ident, input: &DeriveInput) -> Result<proc_macro2::TokenStream, Error> {
+    let category = parse_category_attrs(&input.attrs)?
+        .ok_or_else(|| Error::new_spanned(input, "expected `#[category(...)]` attribute"))?;
     let category_ident = format_ident!("{}", format!("{:?}", category));
-    let explicit_status = parse_status_attr(input)?;
+    let explicit_status = parse_status_attrs(&input.attrs)?;
     let default_status = category_default_status(&category);
 
     let status_impl = match (default_status, explicit_status) {
@@ -200,5 +209,70 @@ fn derive_anomaly_inner(input: &DeriveInput) -> Result<proc_macro2::TokenStream,
         }
 
         #status_impl
+    })
+}
+
+fn derive_enum(name: &Ident, data: &DataEnum) -> Result<proc_macro2::TokenStream, Error> {
+    let mut category_arms = Vec::new();
+    let mut status_arms = Vec::new();
+
+    for variant in &data.variants {
+        let vname = &variant.ident;
+
+        let category = parse_category_attrs(&variant.attrs)?.ok_or_else(|| {
+            Error::new_spanned(vname, "expected `#[category(...)]` attribute on variant")
+        })?;
+        let category_ident = format_ident!("{}", format!("{:?}", category));
+
+        let explicit_status = parse_status_attrs(&variant.attrs)?;
+        let default_status = category_default_status(&category);
+
+        let status_spec = match (default_status, explicit_status) {
+            (Some(_), Some((status_ident, _))) => {
+                return Err(Error::new_spanned(
+                    &status_ident,
+                    "`#[status(...)]` is only valid for categories without a default (`interrupted`, `not_found`)",
+                ));
+            }
+            (Some(default), None) => default,
+            (None, Some((_, spec))) => spec,
+            (None, None) => {
+                return Err(Error::new_spanned(
+                    vname,
+                    "variant has no default status; add `#[status(temporary|permanent|persistent)]`",
+                ));
+            }
+        };
+
+        let pattern = match &variant.fields {
+            Fields::Unit => quote! { Self::#vname },
+            Fields::Unnamed(_) => quote! { Self::#vname(..) },
+            Fields::Named(_) => quote! { Self::#vname { .. } },
+        };
+
+        let status_ident = format_ident!("{}", format!("{:?}", status_spec));
+
+        category_arms.push(quote! { #pattern => ::anomalies::category::#category_ident });
+        status_arms.push(quote! { #pattern => ::anomalies::status::Status::#status_ident });
+    }
+
+    Ok(quote! {
+        impl ::anomalies::anomaly::Anomaly for #name {}
+
+        impl ::anomalies::anomaly::HasCategory for #name {
+            fn category(&self) -> ::anomalies::category::Category {
+                match self {
+                    #(#category_arms,)*
+                }
+            }
+        }
+
+        impl ::anomalies::anomaly::HasStatus for #name {
+            fn status(&self) -> ::anomalies::status::Status {
+                match self {
+                    #(#status_arms,)*
+                }
+            }
+        }
     })
 }

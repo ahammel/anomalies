@@ -1,0 +1,5 @@
+error: expected `#[category(...)]` attribute on variant
+  --> tests/ui/enum_no_category.rs:10:5
+   |
+10 |     Missing,
+   |     ^^^^^^^
